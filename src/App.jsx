@@ -231,13 +231,14 @@ async function loadAllData() {
     if (!date) continue;
     const statLead = String(r[7]  || "").trim().toLowerCase();
     const statBit  = String(r[18] || "").trim().toLowerCase();
-    const suma     = parseNum(r[23]);
+    const sumaW    = parseNum(r[22]);   // W: доп. условие > 0
+    const suma     = parseNum(r[23]);   // X: сумма оплаты
     const key = date + "__" + sourceId;
     if (!salesLookup[key]) salesLookup[key] = { qual:0, demo:0, sales:0, revenue:0 };
     if (statLead === "выигрыш")       salesLookup[key].qual++;
     if (DEMO_STATUSES.has(statBit))   salesLookup[key].demo++;
     if (statBit === "оплата")         salesLookup[key].sales++;
-    if (suma > 0)                      salesLookup[key].revenue += suma;
+    if (suma > 0 && sumaW > 0)        salesLookup[key].revenue += suma;
   }
 
   return { adLookup, salesLookup };

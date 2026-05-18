@@ -39,16 +39,20 @@ function mapChannel(ch) {
   const c  = (ch || "").trim();
   if (!c) return null;
   const lo = c.toLowerCase();
-  // РСЯ — проверяем первым, до общей проверки на Яндекс
-  if (lo.includes("рся"))             return "rsya";
+  // РСЯ — первым, до Яндекса
+  if (lo.includes("рся"))                       return "rsya";
   // Любой Яндекс без РСЯ
-  if (lo.includes("яндекс"))         return "yandex";
-  // Остальные — точное совпадение
-  if (c === "VK product offers")      return "vk";
-  if (c === "TG Ads офферы")         return "tg";
-  if (c === "Рекламный кабинет HH")  return "hh";
-  if (c === "Авито ADS")             return "avito";
-  if (c === "МТС Маркетолог")        return "mts";
+  if (lo.includes("яндекс") || lo.includes("yandex")) return "yandex";
+  // VK
+  if (lo.includes("vk product"))                return "vk";
+  // TG
+  if (lo.includes("tg ads"))                    return "tg";
+  // HH
+  if (lo.includes("рекламный кабинет hh"))      return "hh";
+  // Авито
+  if (lo.includes("авито"))                     return "avito";
+  // МТС
+  if (lo.includes("мтс маркетолог") || lo.includes("мтс"))  return "mts";
   return null;
 }
 
@@ -214,11 +218,22 @@ async function loadAllData() {
 
   // ── Данные продаж ─────────────────────────────────────────────────────────
   const salesLookup = {};
-  const salesRows = raw.sales || [];
+  const salesRows   = raw.sales || [];
+  const debugChannels = {};   // Z-значение → кол-во оплаченных строк
+
   for (let i = 1; i < salesRows.length; i++) {
     const r = salesRows[i];
     if (!r || r.length < 26) continue;
-    const channel = String(r[25] || "").trim();
+    const channel    = String(r[25] || "").trim();
+    const dateOplaty = String(r[22] || "").trim();
+    const suma       = parseNum(r[23]);
+
+    // Дебаг: считаем Z-значения для строк с оплатой
+    if (dateOplaty !== "") {
+      const dbKey = channel || "(пустой)";
+      debugChannels[dbKey] = (debugChannels[dbKey] || 0) + 1;
+    }
+
     if (!channel) continue;
     const sourceId = mapChannel(channel);
     if (!sourceId) continue;
@@ -226,22 +241,18 @@ async function loadAllData() {
     if (!date) continue;
     const statLead  = String(r[7]  || "").trim().toLowerCase();
     const statBit   = String(r[18] || "").trim().toLowerCase();
-    const dateOplaty = String(r[22] || "").trim();  // W: дата оплаты (не пустая = продажа)
-    const suma       = parseNum(r[23]);             // X: сумма оплаты
+
     const key = date + "__" + sourceId;
     if (!salesLookup[key]) salesLookup[key] = { qual:0, demo:0, sales:0, revenue:0 };
-    // Квал: статус лида = "Выигрыш"
     if (statLead === "выигрыш")       salesLookup[key].qual++;
-    // Демо: статус из битрикса входит в список
     if (DEMO_STATUSES.has(statBit))   salesLookup[key].demo++;
-    // Продажи и Сумма продаж: столбец W (дата оплаты) не пустой
-    if (dateOplaty !== "") {
+    if (dateOplaty !== "" && statBit === "оплата") {
       salesLookup[key].sales++;
       if (suma > 0) salesLookup[key].revenue += suma;
     }
   }
 
-  return { adLookup, salesLookup };
+  return { adLookup, salesLookup, debugChannels };
 }
 
 // Обёртки для совместимости с существующим кодом
@@ -453,6 +464,13 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size
 .sync-btn:hover{opacity:1}
 .sync-hint{font-size:8.5px;color:var(--yel);line-height:1.4;margin-top:2px;font-style:italic}
 .sync-errmsg{font-size:8px;color:var(--red);font-family:var(--mono);line-height:1.4;margin-top:2px;word-break:break-all}
+.debug-channels{margin-top:3px;max-height:180px;overflow-y:auto;font-size:8px;font-family:var(--mono)}
+.debug-row{display:grid;grid-template-columns:22px 36px 1fr;gap:3px;padding:2px 3px;border-radius:2px;line-height:1.4}
+.debug-row.unmapped{background:rgba(244,80,80,.08);color:var(--red)}
+.debug-row:not(.unmapped){color:var(--t2)}
+.debug-cnt{color:var(--yel);text-align:right}
+.debug-src{color:var(--acc);overflow:hidden}
+.debug-val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t3)}
 .sb-logout{margin-top:8px;width:100%;padding:5px;background:transparent;border:1px solid var(--b2);border-radius:4px;color:var(--t2);font-size:11px;cursor:pointer;font-family:var(--font);transition:all .15s}
 .sb-logout:hover{border-color:var(--red);color:var(--red)}
 .sb-setup{margin-top:10px;padding-top:10px;border-top:1px solid var(--b1)}
@@ -947,15 +965,15 @@ export default function App() {
   const [ct2, setCt2]     = useState("");
 
   // ── Данные рекламных кабинетов ────────────────────────────────────────────
-  const [adLookup,    setAdLookup]    = useState(null);
-  const [adError,     setAdError]     = useState(null);
-  const [adUpdated,   setAdUpdated]   = useState(null);
-  const [adRowCount,  setAdRowCount]  = useState(0);
-
-  // ── Данные продаж ─────────────────────────────────────────────────────────
-  const [salesLookup,  setSalesLookup]  = useState(null);
-  const [salesError,   setSalesError]   = useState(null);
-  const [salesUpdated, setSalesUpdated] = useState(null);
+  const [adLookup,       setAdLookup]       = useState(null);
+  const [adError,        setAdError]         = useState(null);
+  const [adUpdated,      setAdUpdated]       = useState(null);
+  const [adRowCount,     setAdRowCount]      = useState(0);
+  const [salesLookup,    setSalesLookup]     = useState(null);
+  const [salesError,     setSalesError]      = useState(null);
+  const [salesUpdated,   setSalesUpdated]    = useState(null);
+  const [debugChannels,  setDebugChannels]   = useState(null);
+  const [showDebug,      setShowDebug]       = useState(false);
 
   const tsNow = () => new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
 
@@ -964,12 +982,13 @@ export default function App() {
     setAdLookup(null);    setAdError(null);
     setSalesLookup(null); setSalesError(null);
     loadAllData()
-      .then(({ adLookup: al, salesLookup: sl }) => {
+      .then(({ adLookup: al, salesLookup: sl, debugChannels: dc }) => {
         setAdLookup(al);
         setAdRowCount(Object.keys(al).length);
         setAdUpdated(tsNow());
         setSalesLookup(sl);
         setSalesUpdated(tsNow());
+        setDebugChannels(dc);
       })
       .catch(e => {
         setAdError(e.message);
@@ -1099,8 +1118,30 @@ export default function App() {
               {salesLookup && <span className="sync-ok">✓ {salesUpdated} <button className="sync-btn" onClick={doLoadSales}>↻</button></span>}
               {salesError && <span className="sync-err">✕ нет доступа <button className="sync-btn" onClick={doLoadSales}>↻</button></span>}
             </div>
+            {salesLookup && debugChannels && Object.keys(debugChannels).length > 0 && (
+              <div style={{marginTop:4}}>
+                <button className="sync-btn" style={{width:"100%",textAlign:"left",padding:"2px 5px"}}
+                  onClick={()=>setShowDebug(v=>!v)}>
+                  {showDebug?"▲ скрыть":"▼ Z-значения оплат ("}{Object.values(debugChannels).reduce((a,b)=>a+b,0)}{showDebug?")":")"}
+                </button>
+                {showDebug && (
+                  <div className="debug-channels">
+                    {Object.entries(debugChannels).sort((a,b)=>b[1]-a[1]).map(([ch,cnt])=>{
+                      const mapped = mapChannel(ch);
+                      return (
+                        <div key={ch} className={`debug-row ${mapped?"":"unmapped"}`}>
+                          <span className="debug-cnt">{cnt}×</span>
+                          <span className="debug-src">{mapped||"—"}</span>
+                          <span className="debug-val" title={ch}>{ch.length>18?ch.slice(0,17)+"…":ch}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
             {(adError || salesError) && (
-              <div className="sync-hint">Откройте таблицу → Настройки доступа → «Все, у кого есть ссылка» → Читатель</div>
+              <div className="sync-hint">Откройте таблицу → Настройки доступа → «Все, у кому есть ссылка» → Читатель</div>
             )}
           </div>
           <button className="sb-logout" onClick={()=>setUser(null)}>Выйти</button>

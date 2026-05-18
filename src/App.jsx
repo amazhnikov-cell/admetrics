@@ -1009,42 +1009,50 @@ export default function App() {
   const buildRows = (range) => {
     const sources = tab === "summary" ? SOURCES.map(s=>s.id) : [tab];
 
-    // Mock fallback (loading или нет реальных данных)
     const mockRows = () => sources.flatMap(srcId =>
       filterRows(RAW[srcId], range.from, range.to).map(r => ({...r, source: srcId, _mock: true}))
     );
 
     if (!adLookup) return mockRows();
 
-    // Реальные данные: перебираем все даты диапазона
-    const rows = [];
+    // Собираем все даты из обоих источников (рекламные + продажи)
+    const dateSet = new Set();
     let d = new Date(range.from);
     const end = new Date(range.to);
     while (d <= end) {
-      const ds = d.toISOString().split("T")[0];
-      for (const srcId of sources) {
-        const ad = adLookup[`${ds}__${srcId}`];
-        if (ad) {
-          const row = { date: ds, source: srcId, ...ad,
-            qual:0, demo:0, sales:0, revenue:0, cogs:0, grossMargin:0 };
-          if (salesLookup) {
-            const sd = salesLookup[`${ds}__${srcId}`];
-            if (sd) {
-              row.qual     = sd.qual;
-              row.demo     = sd.demo;
-              row.sales    = sd.sales;
-              row.revenue  = sd.revenue;
-              row.cogs     = Math.round(sd.revenue * COGS_RATE);
-              row.grossMargin = sd.revenue - row.cogs - row.totalSpend;
-            }
-          }
-          rows.push(row);
-        }
-      }
-      d.setDate(d.getDate()+1);
+      dateSet.add(d.toISOString().split("T")[0]);
+      d.setDate(d.getDate() + 1);
     }
 
-    // Если реальных данных за период нет — показываем mock с флагом
+    const rows = [];
+    for (const ds of dateSet) {
+      for (const srcId of sources) {
+        const ad = adLookup[`${ds}__${srcId}`];
+        const sd = salesLookup ? salesLookup[`${ds}__${srcId}`] : null;
+
+        // Берём строку если есть рекламные данные ИЛИ данные продаж
+        if (!ad && !sd) continue;
+
+        const row = {
+          date: ds, source: srcId,
+          spend:       ad?.spend       || 0,
+          salary:      ad?.salary      || 0,
+          totalSpend:  ad?.totalSpend  || 0,
+          impressions: ad?.impressions || 0,
+          clicks:      ad?.clicks      || 0,
+          leads:       ad?.leads       || 0,
+          qual:        sd?.qual        || 0,
+          demo:        sd?.demo        || 0,
+          sales:       sd?.sales       || 0,
+          revenue:     sd?.revenue     || 0,
+          cogs:        sd ? Math.round((sd.revenue||0) * COGS_RATE) : 0,
+          grossMargin: 0,
+        };
+        row.grossMargin = row.revenue - row.cogs - row.totalSpend;
+        rows.push(row);
+      }
+    }
+
     if (rows.length === 0) return mockRows();
     return rows;
   };

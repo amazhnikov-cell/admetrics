@@ -36,24 +36,19 @@ const DEMO_STATUSES = new Set([
 const SALES_COL = { date: 5, statusLead: 7, statusBitrix: 18, suma: 23, channel: 25 };
 
 function mapChannel(ch) {
-  const c = (ch || "").trim();
+  const c  = (ch || "").trim();
   if (!c) return null;
   const lo = c.toLowerCase();
-  // РСЯ — должно идти первым
-  if (lo.includes("рся") || lo.includes("rsya")) return "rsya";
-  // Любой Яндекс Директ / Яндекс.Директ
-  if (lo.includes("яндекс") || lo.includes("yandex")) return "yandex";
-  // Остальные источники — точное совпадение по ключевым словам
-  if (c === "VK product offers")       return "vk";
-  if (lo.includes("vk product"))       return "vk";
-  if (c === "TG Ads офферы")          return "tg";
-  if (lo.includes("tg ads"))           return "tg";
-  if (c === "Рекламный кабинет HH")   return "hh";
-  if (lo.includes("рекламный кабинет hh") || lo.includes("hh.ru")) return "hh";
-  if (c === "Авито ADS")              return "avito";
-  if (lo.includes("авито"))           return "avito";
-  if (c === "МТС Маркетолог")         return "mts";
-  if (lo.includes("мтс"))             return "mts";
+  // РСЯ — проверяем первым, до общей проверки на Яндекс
+  if (lo.includes("рся"))             return "rsya";
+  // Любой Яндекс без РСЯ
+  if (lo.includes("яндекс"))         return "yandex";
+  // Остальные — точное совпадение
+  if (c === "VK product offers")      return "vk";
+  if (c === "TG Ads офферы")         return "tg";
+  if (c === "Рекламный кабинет HH")  return "hh";
+  if (c === "Авито ADS")             return "avito";
+  if (c === "МТС Маркетолог")        return "mts";
   return null;
 }
 
@@ -229,16 +224,21 @@ async function loadAllData() {
     if (!sourceId) continue;
     const date = parseDate(String(r[5] || ""));
     if (!date) continue;
-    const statLead = String(r[7]  || "").trim().toLowerCase();
-    const statBit  = String(r[18] || "").trim().toLowerCase();
-    const sumaW    = parseNum(r[22]);   // W: доп. условие > 0
-    const suma     = parseNum(r[23]);   // X: сумма оплаты
+    const statLead  = String(r[7]  || "").trim().toLowerCase();
+    const statBit   = String(r[18] || "").trim().toLowerCase();
+    const dateOplaty = String(r[22] || "").trim();  // W: дата оплаты (не пустая = продажа)
+    const suma       = parseNum(r[23]);             // X: сумма оплаты
     const key = date + "__" + sourceId;
     if (!salesLookup[key]) salesLookup[key] = { qual:0, demo:0, sales:0, revenue:0 };
+    // Квал: статус лида = "Выигрыш"
     if (statLead === "выигрыш")       salesLookup[key].qual++;
+    // Демо: статус из битрикса входит в список
     if (DEMO_STATUSES.has(statBit))   salesLookup[key].demo++;
-    if (statBit === "оплата")         salesLookup[key].sales++;
-    if (suma > 0 && sumaW > 0)        salesLookup[key].revenue += suma;
+    // Продажи и Сумма продаж: столбец W (дата оплаты) не пустой
+    if (dateOplaty !== "") {
+      salesLookup[key].sales++;
+      if (suma > 0) salesLookup[key].revenue += suma;
+    }
   }
 
   return { adLookup, salesLookup };

@@ -227,20 +227,20 @@ async function loadAllData() {
     const channel    = String(r[25] || "").trim();
     const dateOplaty = String(r[22] || "").trim();
     const suma       = parseNum(r[23]);
+    const statLead   = String(r[7]  || "").trim().toLowerCase();
+    const statBit    = String(r[18] || "").trim().toLowerCase();
 
-    // Дебаг: считаем Z-значения для строк с оплатой + собираем даты по rsya
-  if (dateOplaty !== "" && statBit === "оплата") {
-    const dbKey = channel || "(пустой)";
-    debugChannels[dbKey] = (debugChannels[dbKey] || 0) + 1;
-  }
+    // Дебаг: все оплаченные строки (W не пустой + статус оплата)
+    if (dateOplaty !== "" && statBit === "оплата") {
+      const dbKey = channel || "(пустой)";
+      debugChannels[dbKey] = (debugChannels[dbKey] || 0) + 1;
+    }
 
     if (!channel) continue;
     const sourceId = mapChannel(channel);
     if (!sourceId) continue;
     const date = parseDate(String(r[5] || ""));
     if (!date) continue;
-    const statLead  = String(r[7]  || "").trim().toLowerCase();
-    const statBit   = String(r[18] || "").trim().toLowerCase();
 
     const key = date + "__" + sourceId;
     if (!salesLookup[key]) salesLookup[key] = { qual:0, demo:0, sales:0, revenue:0 };

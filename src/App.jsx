@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import Papa from "papaparse";
 
@@ -408,6 +408,7 @@ const PRESETS = [
   { id: "month",     label: "Этот месяц"    },
   { id: "prev",      label: "Прошлый месяц" },
   { id: "year",      label: "Этот год"      },
+  { id: "lastyear",  label: "Прошлый год"   },
 ];
 
 function presetRange(p) {
@@ -428,8 +429,9 @@ function presetRange(p) {
     }
     case "month": return { from: `${y}-${m}-01`,     to: today };
     case "prev":  return { from: `${prevY}-${prevM}-01`, to: prevLast };
-    case "year":  return { from: `${y}-01-01`,        to: today };
-    default:      return { from: addDays(today,-29),  to: today };
+    case "year":     return { from: `${y}-01-01`,     to: today };
+    case "lastyear": return { from: `${y-1}-01-01`,   to: `${y-1}-12-31` };
+    default:         return { from: addDays(today,-29), to: today };
   }
 }
 
@@ -964,7 +966,7 @@ export default function App() {
   const [user, setUser]   = useState(null);
   const [tab, setTab]     = useState("summary");
 
-  const [preset1, setP1]  = useState("month");
+  const [preset1, setP1]  = useState("year");
   const [cf1, setCf1]     = useState("");
   const [ct1, setCt1]     = useState("");
 
@@ -1218,6 +1220,50 @@ export default function App() {
         <KPIGrid data={agg1} data2={agg2} cmp={cmp} isMock={isMockData}/>
         <Charts rows1={rows1} rows2={rows2} cmp={cmp}/>
         <DataTable rows={rows1} isSummary={isSummary} srcId={tab}/>
+
+        {/* ВРЕМЕННЫЙ ДЕБАГ — удалить после диагностики */}
+        {isSummary && salesLookup && adLookup && (()=>{
+          const rsyaKeys = Object.keys(salesLookup).filter(k=>k.includes("__rsya"));
+          const rsyaInRange = rsyaKeys.filter(k=>{
+            const dt = k.split("__")[0];
+            return dt >= range1.from && dt <= range1.to;
+          });
+          const rsyaRows = rows1.filter(r=>r.source==="rsya");
+          const rsyaSales = rsyaRows.reduce((a,r)=>a+(r.sales||0),0);
+          return (
+            <div style={{background:"#0a0e16",border:"1px solid #2A3A55",borderRadius:8,
+              padding:"14px 18px",marginBottom:16,fontFamily:"'JetBrains Mono',monospace",fontSize:11}}>
+              <div style={{color:"#A78BFA",fontWeight:700,marginBottom:10,fontSize:12}}>
+                🔍 ДЕБАГ: Яндекс РСЯ
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div style={{color:"#4A5568"}}>salesLookup rsya всего:</div>
+                <div style={{color:"#E8EDF5"}}>{rsyaKeys.length} записей</div>
+                <div style={{color:"#4A5568"}}>rsya в диапазоне {range1.from}…{range1.to}:</div>
+                <div style={{color: rsyaInRange.length>0?"#22C875":"#F45050"}}>
+                  {rsyaInRange.length} записей
+                </div>
+                <div style={{color:"#4A5568"}}>rows1 с source=rsya:</div>
+                <div style={{color: rsyaRows.length>0?"#22C875":"#F45050"}}>
+                  {rsyaRows.length} строк
+                </div>
+                <div style={{color:"#4A5568"}}>Итого продаж по rsya:</div>
+                <div style={{color: rsyaSales>0?"#22C875":"#F45050"}}>
+                  {rsyaSales}
+                </div>
+                {rsyaInRange.slice(0,5).map(k=>{
+                  const sl = salesLookup[k];
+                  return <React.Fragment key={k}>
+                    <div style={{color:"#4A5568",fontSize:10}}>{k}</div>
+                    <div style={{color:"#8A95A8",fontSize:10}}>
+                      sales:{sl.sales} rev:{Math.round(sl.revenue)}
+                    </div>
+                  </React.Fragment>;
+                })}
+              </div>
+            </div>
+          );
+        })()}
       </main>
     </div>
     </>

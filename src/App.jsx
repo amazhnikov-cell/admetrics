@@ -39,9 +39,11 @@ function mapChannel(ch) {
   const c  = (ch || "").trim();
   if (!c) return null;
   const lo = c.toLowerCase();
+  // Исключаем SEO-трафик
+  if (lo.includes("seo"))                       return null;
   // РСЯ — первым, до Яндекса
   if (lo.includes("рся"))                       return "rsya";
-  // Любой Яндекс без РСЯ
+  // Любой Яндекс без РСЯ и без SEO
   if (lo.includes("яндекс") || lo.includes("yandex")) return "yandex";
   // VK
   if (lo.includes("vk product"))                return "vk";

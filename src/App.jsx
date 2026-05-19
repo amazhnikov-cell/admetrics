@@ -228,11 +228,11 @@ async function loadAllData() {
     const dateOplaty = String(r[22] || "").trim();
     const suma       = parseNum(r[23]);
 
-    // Дебаг: считаем Z-значения для строк с оплатой
-    if (dateOplaty !== "") {
-      const dbKey = channel || "(пустой)";
-      debugChannels[dbKey] = (debugChannels[dbKey] || 0) + 1;
-    }
+    // Дебаг: считаем Z-значения для строк с оплатой + собираем даты по rsya
+  if (dateOplaty !== "" && statBit === "оплата") {
+    const dbKey = channel || "(пустой)";
+    debugChannels[dbKey] = (debugChannels[dbKey] || 0) + 1;
+  }
 
     if (!channel) continue;
     const sourceId = mapChannel(channel);
@@ -309,7 +309,7 @@ const BASE = {
 const SALARY_RATE = 0.22;
 const COGS_RATE   = 0.13;
 const AVG_PRICE   = 359184;
-const TODAY       = "2026-05-10";
+const TODAY = new Date().toISOString().split("T")[0];  // реальная текущая дата
 
 // ─── DATA GEN ────────────────────────────────────────────────────────────────
 
@@ -411,16 +411,25 @@ const PRESETS = [
 ];
 
 function presetRange(p) {
+  const now      = new Date();
+  const today    = now.toISOString().split("T")[0];
+  const y        = now.getFullYear();
+  const m        = String(now.getMonth() + 1).padStart(2, "0");
+  const prevDate = new Date(y, now.getMonth() - 1, 1);
+  const prevY    = prevDate.getFullYear();
+  const prevM    = String(prevDate.getMonth() + 1).padStart(2, "0");
+  const prevLast = new Date(y, now.getMonth(), 0).toISOString().split("T")[0];
+
   switch (p) {
-    case "yesterday": return { from: addDays(TODAY, -1), to: addDays(TODAY, -1) };
+    case "yesterday": return { from: addDays(today,-1), to: addDays(today,-1) };
     case "week": {
-      const dow = new Date(TODAY).getDay();
-      return { from: addDays(TODAY, -(dow === 0 ? 6 : dow - 1)), to: TODAY };
+      const dow = now.getDay();
+      return { from: addDays(today, -(dow===0?6:dow-1)), to: today };
     }
-    case "month": return { from: "2026-05-01", to: TODAY };
-    case "prev":  return { from: "2026-04-01", to: "2026-04-30" };
-    case "year":  return { from: "2026-01-01", to: TODAY };
-    default:      return { from: "2026-04-11", to: TODAY };
+    case "month": return { from: `${y}-${m}-01`,     to: today };
+    case "prev":  return { from: `${prevY}-${prevM}-01`, to: prevLast };
+    case "year":  return { from: `${y}-01-01`,        to: today };
+    default:      return { from: addDays(today,-29),  to: today };
   }
 }
 
@@ -1144,6 +1153,22 @@ export default function App() {
                         </div>
                       );
                     })}
+                    {/* Показываем даты rsya-записей в salesLookup */}
+                    {salesLookup && (() => {
+                      const rsyaDates = Object.keys(salesLookup)
+                        .filter(k=>k.endsWith("__rsya"))
+                        .map(k=>k.split("__")[0])
+                        .sort();
+                      if (!rsyaDates.length) return null;
+                      return (
+                        <div style={{marginTop:4,paddingTop:4,borderTop:"1px solid var(--b1)"}}>
+                          <div style={{color:"var(--ora)",fontSize:8,marginBottom:2}}>РСЯ продажи (даты лидов):</div>
+                          {rsyaDates.map(d=>(
+                            <div key={d} style={{fontSize:8,color:"var(--t3)",fontFamily:"var(--mono)"}}>{d}</div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

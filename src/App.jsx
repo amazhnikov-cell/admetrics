@@ -957,9 +957,14 @@ function DataTable({ rows, isSummary, srcId }) {
             ))}
             <tr className="tr-total">
               <td>ИТОГО</td>
-              {COLS.map(col=>(
-                <td key={col.k} className={col.cls}>{col.f(total[col.k]??0)}</td>
-              ))}
+              {COLS.map(col=>{
+                const ht = isSummary ? heatmapClass(col.k, total[col.k]??0) : "";
+                return (
+                  <td key={col.k} className={ht || col.cls}>
+                    {col.f(total[col.k]??0)}
+                  </td>
+                );
+              })}
             </tr>
           </tbody>
         </table>

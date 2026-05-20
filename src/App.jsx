@@ -566,6 +566,9 @@ td:first-child{text-align:left;font-family:var(--font);color:var(--t1);font-weig
 tr:hover td{background:rgba(22,29,46,.7)}
 .tr-total td{border-top:1px solid var(--b2);color:var(--t1);font-weight:700;background:rgba(10,14,22,.6)}
 .cf-spend{color:var(--ora)!important}.cf-funnel{color:var(--acc)!important}.cf-money{color:var(--grn)!important}
+.ht-grn{color:#22C875!important;font-weight:600}
+.ht-yel{color:#EAB308!important;font-weight:600}
+.ht-red{color:#F45050!important;font-weight:600}
 
 /* Login */
 .lw{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden}
@@ -830,6 +833,31 @@ function Charts({ rows1, rows2, cmp }) {
 
 // ─── DATA TABLE ───────────────────────────────────────────────────────────────
 
+// Подсветка значений в сводной таблице
+function heatmapClass(colKey, value) {
+  if (!value && value !== 0) return "";
+  switch (colKey) {
+    case "cpql":
+      if (value < 18000)  return "ht-grn";
+      if (value <= 22000) return "ht-yel";
+      return "ht-red";
+    case "crQualDemo":
+      if (value > 0.50)  return "ht-grn";
+      if (value >= 0.30) return "ht-yel";
+      return "ht-red";
+    case "crDemoSale":
+      if (value > 0.15)  return "ht-grn";
+      if (value >= 0.08) return "ht-yel";
+      return "ht-red";
+    case "grossMargin":
+      if (value > 0)  return "ht-grn";
+      if (value < 0)  return "ht-red";
+      return "";
+    default: return "";
+  }
+}
+
+
 function buildCampRow(name, a, w) {
   const spend = Math.round((a.spend||0)*w), salary = Math.round((a.salary||0)*w);
   const totalSpend = spend + salary;
@@ -917,9 +945,14 @@ function DataTable({ rows, isSummary, srcId }) {
                   {row.color && <span className="sbadge" style={{background:row.color}}/>}
                   {row.name}
                 </td>
-                {COLS.map(col=>(
-                  <td key={col.k} className={col.cls}>{col.f(row[col.k]??0)}</td>
-                ))}
+                {COLS.map(col=>{
+                  const ht = isSummary ? heatmapClass(col.k, row[col.k]??0) : "";
+                  return (
+                    <td key={col.k} className={ht || col.cls}>
+                      {col.f(row[col.k]??0)}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
             <tr className="tr-total">

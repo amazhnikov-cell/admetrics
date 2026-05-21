@@ -664,18 +664,21 @@ function Login({ onLogin }) {
 
 function KPIGrid({ data, data2, cmp, isMock }) {
   const cards = [
-    { lbl:"Расход (кабинет)", k:"spend",       val:rubK(data.spend||0),        cls:"c-ora" },
-    { lbl:"Расход + ЗП",      k:"totalSpend",  val:rubK(data.totalSpend||0),   cls:"c-ora" },
-    { lbl:"Лиды",             k:"leads",       val:ru(data.leads||0),           cls:"c-acc" },
-    { lbl:"CPL",              k:"cpl",         val:rubFull(data.cpl||0),        cls:"c-wht" },
-    { lbl:"Квалиф. лиды",    k:"qual",        val:ru(data.qual||0),            cls:"c-acc" },
-    { lbl:"CPQL",             k:"cpql",        val:rubFull(data.cpql||0),       cls:"c-wht" },
-    { lbl:"Демо",             k:"demo",        val:ru(data.demo||0),            cls:"c-acc" },
-    { lbl:"Продажи",          k:"sales",       val:ru(data.sales||0),           cls:"c-grn" },
-    { lbl:"Выручка",          k:"revenue",     val:rubK(data.revenue||0),       cls:"c-grn" },
-    { lbl:"CAC",              k:"cac",         val:rubFull(data.cac||0),        cls:"c-yel" },
-    { lbl:"COGS",             k:"cogs",        val:rubK(data.cogs||0),          cls:"c-wht" },
-    { lbl:"Gross Margin",     k:"grossMargin", val:rubK(data.grossMargin||0),   cls:"c-grn" },
+    { lbl:"Расход (кабинет)", k:"spend",       val:rubK(data.spend||0),              cls:"c-ora" },
+    { lbl:"Расход + ЗП",      k:"totalSpend",  val:rubK(data.totalSpend||0),         cls:"c-ora" },
+    { lbl:"Лиды",             k:"leads",       val:ru(data.leads||0),                 cls:"c-acc" },
+    { lbl:"CPL",              k:"cpl",         val:rubFull(data.cpl||0),              cls:"c-wht" },
+    { lbl:"Квалиф. лиды",    k:"qual",        val:ru(data.qual||0),                  cls:"c-acc" },
+    { lbl:"C1QL",             k:"c1ql",        val:pct(data.c1ql||0),                 cls:"c-acc" },
+    { lbl:"CPQL",             k:"cpql",        val:rubFull(data.cpql||0),             cls:"c-wht" },
+    { lbl:"Демо",             k:"demo",        val:ru(data.demo||0),                  cls:"c-acc" },
+    { lbl:"CR квал→демо",    k:"crQualDemo",  val:pct(data.crQualDemo||0),           cls:"c-acc" },
+    { lbl:"Продажи",          k:"sales",       val:ru(data.sales||0),                 cls:"c-grn" },
+    { lbl:"CR демо→прод.",   k:"crDemoSale",  val:pct(data.crDemoSale||0),           cls:"c-grn" },
+    { lbl:"Выручка",          k:"revenue",     val:rubK(data.revenue||0),             cls:"c-grn" },
+    { lbl:"CAC",              k:"cac",         val:rubFull(data.cac||0),              cls:"c-yel" },
+    { lbl:"COGS",             k:"cogs",        val:rubK(data.cogs||0),                cls:"c-wht" },
+    { lbl:"Gross Margin",     k:"grossMargin", val:rubK(data.grossMargin||0),         cls:"c-grn" },
   ];
 
   return (

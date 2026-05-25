@@ -151,14 +151,16 @@ function parseYandexTemplateRows(rawRows) {
     const date = parseDate(String(r[0]));
     const src  = mapDirection(String(r[1] || ""));
     if (!date || !src) continue;
-    const spend = parseNum(r[2]);
-    const sal   = parseNum(r[3]);
-    const imp   = parseNum(r[5]);
-    const clk   = parseNum(r[6]);
-    const leads = parseNum(r[7]);
+    const spend      = parseNum(r[2]);           // C: Расход (каб.)
+    const sal        = parseNum(r[3]);           // D: ЗП
+    const totalSpend = parseNum(r[4]) || (spend + sal); // E: Расход+ЗП (формула C+D)
+    const salary     = Math.max(0, totalSpend - spend); // ЗП = разница
+    const imp        = parseNum(r[5]);
+    const clk        = parseNum(r[6]);
+    const leads      = parseNum(r[7]);
     if (spend === 0 && imp === 0) continue;
-    result.push({ date, source: src, spend, salary: sal,
-      totalSpend: spend + sal, impressions: imp, clicks: clk, leads });
+    result.push({ date, source: src, spend, salary,
+      totalSpend, impressions: imp, clicks: clk, leads });
   }
   return result;
 }

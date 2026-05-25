@@ -204,9 +204,30 @@ async function loadAllData() {
     });
   });
 
-  // Яндекс: предпочитаем Код.gs лист, иначе шаблон
+  // Яндекс: берём метрики из Код.gs листа, ЗП — из шаблона (gid=1926115906)
+  // Шаблон всегда читаем для ЗП; если есть Код.gs лист — берём из него show/imp/clk/leads
   if (raw.ad_yandex_direct && raw.ad_yandex_direct.length > 1) {
-    merge(parseYandexDirectRows(raw.ad_yandex_direct));
+    // Сначала загружаем шаблон — получаем salary/totalSpend
+    if (raw.ad_yandex_rsya) {
+      merge(parseYandexTemplateRows(raw.ad_yandex_rsya));
+    }
+    // Затем мёржим данные из Код.gs — перезаписываем spend/imp/clicks/leads
+    const directRows = parseYandexDirectRows(raw.ad_yandex_direct);
+    directRows.forEach(r => {
+      const key = r.date + "__" + r.source;
+      if (!adLookup[key]) {
+        adLookup[key] = { ...r };
+      } else {
+        // Берём spend/imp/clicks/leads из Код.gs, salary/totalSpend из шаблона
+        const existingSalary = adLookup[key].salary || 0;
+        adLookup[key].spend       = r.spend;
+        adLookup[key].impressions = r.impressions;
+        adLookup[key].clicks      = r.clicks;
+        adLookup[key].leads       = r.leads;
+        adLookup[key].salary      = existingSalary;
+        adLookup[key].totalSpend  = r.spend + existingSalary;
+      }
+    });
   } else if (raw.ad_yandex_rsya) {
     merge(parseYandexTemplateRows(raw.ad_yandex_rsya));
   }
